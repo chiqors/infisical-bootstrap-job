@@ -151,21 +151,30 @@ func ListIdentities(c *HTTPClient, infisicalURL string, headers map[string]strin
 	return resp.Identities, nil
 }
 
-func EnsureIdentity(c *HTTPClient, infisicalURL string, headers map[string]string, orgID, identityName string) (string, string, error) {
+func EnsureIdentity(c *HTTPClient, infisicalURL string, headers map[string]string, orgID, identityName, orgRole string) (string, string, error) {
 	identities, err := ListIdentities(c, infisicalURL, headers, orgID)
 	if err != nil {
 		return "", "", err
 	}
 	for _, item := range identities {
 		if item.Identity.Name == identityName {
+			if orgRole != "" && item.Identity.Role != orgRole {
+				if err := UpdateIdentityRole(c, infisicalURL, headers, item.IdentityID, orgRole); err != nil {
+					return "", "", err
+				}
+			}
 			return item.IdentityID, item.Identity.Name, nil
 		}
+	}
+
+	if orgRole == "" {
+		orgRole = "no-access"
 	}
 
 	payload, err := c.JSONRequest(http.MethodPost, infisicalURL+"/api/v1/identities", headers, mustMarshal(map[string]any{
 		"name":                identityName,
 		"organizationId":      orgID,
-		"role":                "no-access",
+		"role":                orgRole,
 		"hasDeleteProtection": false,
 	}))
 	if err == nil {
@@ -182,10 +191,22 @@ func EnsureIdentity(c *HTTPClient, infisicalURL string, headers map[string]strin
 	}
 	for _, item := range identities {
 		if item.Identity.Name == identityName {
+			if orgRole != "" && item.Identity.Role != orgRole {
+				if err := UpdateIdentityRole(c, infisicalURL, headers, item.IdentityID, orgRole); err != nil {
+					return "", "", err
+				}
+			}
 			return item.IdentityID, item.Identity.Name, nil
 		}
 	}
 	return "", "", err
+}
+
+func UpdateIdentityRole(c *HTTPClient, infisicalURL string, headers map[string]string, identityID, orgRole string) error {
+	_, err := c.JSONRequest(http.MethodPatch, fmt.Sprintf("%s/api/v1/identities/%s", infisicalURL, identityID), headers, mustMarshal(map[string]any{
+		"role": orgRole,
+	}))
+	return err
 }
 
 func EnsureIdentityMembership(c *HTTPClient, infisicalURL string, headers map[string]string, projectID, identityID, identityRole string) error {

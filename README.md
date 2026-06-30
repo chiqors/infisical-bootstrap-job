@@ -38,7 +38,8 @@ docker build -t your-registry/infisical-bootstrap-job:latest jobs/infisical-boot
 Set `BOOTSTRAP_MODE` to choose the flow:
 
 - `platform`: bootstrap a fresh Infisical instance and write the returned bootstrap token to Kubernetes if desired
-- `project`: bootstrap a project, environment, machine identity, project membership, and optional app secrets
+- `operator`: bootstrap the shared organization machine identity, reconcile its org role, bind it into the operator project, enable Kubernetes auth, and write Kubernetes output secrets
+- `project`: bootstrap a project, environment, and project membership for a reused machine identity, plus optional app secrets
 
 If `BOOTSTRAP_MODE` is omitted, it defaults to `project`.
 
@@ -60,6 +61,38 @@ Optional environment variables:
 - `OUTPUT_SECRET_NAME`
 - `OUTPUT_SECRET_KEY`
 
+### Operator mode
+
+Required environment variables:
+
+- `BOOTSTRAP_MODE=operator`
+- `INFISICAL_URL`
+- `BOOTSTRAP_SECRET_NAMESPACE` or `INFISICAL_EMAIL`
+- `BOOTSTRAP_SECRET_NAME` or `INFISICAL_PASSWORD`
+- `ORGANIZATION_ID`
+- `PROJECT_NAME`
+- `PROJECT_SLUG`
+- `ENVIRONMENT_NAME`
+- `ENVIRONMENT_SLUG`
+- `IDENTITY_NAME`
+- `ORGANIZATION_IDENTITY_ROLE`
+- `IDENTITY_ROLE`
+- `KUBERNETES_AUTH_HOST`
+- `ALLOWED_NAMESPACES`
+- `ALLOWED_SERVICE_ACCOUNTS`
+- `OUTPUT_SECRET_NAMESPACE`
+- `OUTPUT_SECRET_NAME`
+- `OUTPUT_SECRET_KEY`
+- `OUTPUT_PROJECT_SECRET_NAME`
+- `OUTPUT_PROJECT_SECRET_KEY`
+
+Optional environment variables:
+
+- `OUTPUT_STATUS_CONFIGMAP`
+- `SMOKE_TEST_SECRET_KEY`
+- `SMOKE_TEST_SECRET_VALUE`
+- `SECRETS_JSON`
+
 ### Project mode
 
 Required environment variables:
@@ -74,10 +107,10 @@ Required environment variables:
 - `ENVIRONMENT_NAME`
 - `ENVIRONMENT_SLUG`
 - `IDENTITY_NAME`
-- `IDENTITY_ROLE`
 
 Optional environment variables:
 
+- `IDENTITY_ROLE`
 - `ENABLE_KUBERNETES_AUTH`
 - `KUBERNETES_AUTH_HOST`
 - `ALLOWED_NAMESPACES`
@@ -105,5 +138,7 @@ Optional environment variables:
 
 - when `WRITE_KUBERNETES_SECRET=true`, the container expects to run inside Kubernetes with a mounted service account token
 - when `ENABLE_KUBERNETES_AUTH=true`, the same in-cluster service account CA bundle is used as the Kubernetes Auth CA certificate
+- `operator` mode is the only mode that reconciles organization-level machine identity role
+- `project` mode reuses an existing machine identity name and only manages project-level membership
 - this image does not assume any specific app; app-specific manifests can supply different env vars
 - that platform example intentionally mirrors the current repo manifest at `gitops/apps/infisical/manifests/infisical-bootstrap-job.yaml`

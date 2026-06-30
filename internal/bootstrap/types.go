@@ -70,6 +70,7 @@ type IdentityRecord struct {
 	Identity   struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
+		Role string `json:"role"`
 	} `json:"identity"`
 }
 
@@ -77,6 +78,7 @@ type CreateIdentityResponse struct {
 	Identity struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
+		Role string `json:"role"`
 	} `json:"identity"`
 }
 

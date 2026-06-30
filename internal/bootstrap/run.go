@@ -6,6 +6,8 @@ func Run() error {
 	switch cfg.Mode {
 	case ModePlatform:
 		return runPlatform(cfg)
+	case ModeOperator:
+		return runOperator(cfg)
 	case ModeProject:
 		return runProject(cfg)
 	default:

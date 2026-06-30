@@ -11,6 +11,7 @@ type Mode string
 
 const (
 	ModeProject  Mode = "project"
+	ModeOperator Mode = "operator"
 	ModePlatform Mode = "platform"
 )
 
@@ -33,6 +34,7 @@ type Config struct {
 	EnvironmentName          string
 	EnvironmentSlug          string
 	IdentityName             string
+	OrganizationIdentityRole string
 	IdentityRole             string
 	EnableKubernetesAuth     bool
 	KubernetesAuthHost       string
@@ -70,6 +72,7 @@ func LoadConfig() Config {
 		EnvironmentName:          strings.TrimSpace(os.Getenv("ENVIRONMENT_NAME")),
 		EnvironmentSlug:          strings.TrimSpace(os.Getenv("ENVIRONMENT_SLUG")),
 		IdentityName:             strings.TrimSpace(os.Getenv("IDENTITY_NAME")),
+		OrganizationIdentityRole: strings.TrimSpace(os.Getenv("ORGANIZATION_IDENTITY_ROLE")),
 		IdentityRole:             strings.TrimSpace(os.Getenv("IDENTITY_ROLE")),
 		EnableKubernetesAuth:     envBool("ENABLE_KUBERNETES_AUTH", false),
 		WriteKubernetesSecret:    envBool("WRITE_KUBERNETES_SECRET", false),
@@ -90,6 +93,8 @@ func loadMode() Mode {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("BOOTSTRAP_MODE"))) {
 	case "", string(ModeProject):
 		return ModeProject
+	case string(ModeOperator):
+		return ModeOperator
 	case string(ModePlatform):
 		return ModePlatform
 	default:
@@ -101,6 +106,8 @@ func (cfg *Config) validate() {
 	switch cfg.Mode {
 	case ModePlatform:
 		cfg.requirePlatformFields()
+	case ModeOperator:
+		cfg.requireOperatorFields()
 	case ModeProject:
 		cfg.requireProjectFields()
 	default:
@@ -146,7 +153,24 @@ func (cfg *Config) requireProjectFields() {
 	cfg.EnvironmentName = mustEnv("ENVIRONMENT_NAME")
 	cfg.EnvironmentSlug = mustEnv("ENVIRONMENT_SLUG")
 	cfg.IdentityName = mustEnv("IDENTITY_NAME")
-	cfg.IdentityRole = mustEnv("IDENTITY_ROLE")
+	if cfg.IdentityRole == "" {
+		cfg.IdentityRole = "member"
+	}
+}
+
+func (cfg *Config) requireOperatorFields() {
+	cfg.requireProjectFields()
+	cfg.OrganizationIdentityRole = mustEnv("ORGANIZATION_IDENTITY_ROLE")
+	cfg.EnableKubernetesAuth = true
+	cfg.WriteKubernetesSecret = true
+	cfg.KubernetesAuthHost = mustEnv("KUBERNETES_AUTH_HOST")
+	cfg.AllowedNamespaces = mustEnv("ALLOWED_NAMESPACES")
+	cfg.AllowedServiceAccounts = mustEnv("ALLOWED_SERVICE_ACCOUNTS")
+	cfg.OutputSecretNamespace = mustEnv("OUTPUT_SECRET_NAMESPACE")
+	cfg.OutputSecretName = mustEnv("OUTPUT_SECRET_NAME")
+	cfg.OutputSecretKey = mustEnv("OUTPUT_SECRET_KEY")
+	cfg.OutputProjectSecretName = mustEnv("OUTPUT_PROJECT_SECRET_NAME")
+	cfg.OutputProjectSecretKey = mustEnv("OUTPUT_PROJECT_SECRET_KEY")
 }
 
 func loadSecretsMap(name string) map[string]string {

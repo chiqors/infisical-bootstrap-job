@@ -7,6 +7,14 @@ import (
 )
 
 func runProject(cfg Config) error {
+	return runProjectLike(cfg)
+}
+
+func runOperator(cfg Config) error {
+	return runProjectLike(cfg)
+}
+
+func runProjectLike(cfg Config) error {
 	api := NewHTTPClient()
 	if err := hydrateProjectCredentials(&cfg); err != nil {
 		return err
@@ -29,7 +37,11 @@ func runProject(cfg Config) error {
 	if err := EnsureEnvironment(api, cfg.InfisicalURL, headers, project, cfg.EnvironmentName, cfg.EnvironmentSlug); err != nil {
 		return err
 	}
-	identityID, identityName, err := EnsureIdentity(api, cfg.InfisicalURL, headers, cfg.OrganizationID, cfg.IdentityName)
+	orgRole := ""
+	if cfg.Mode == ModeOperator {
+		orgRole = cfg.OrganizationIdentityRole
+	}
+	identityID, identityName, err := EnsureIdentity(api, cfg.InfisicalURL, headers, cfg.OrganizationID, cfg.IdentityName, orgRole)
 	if err != nil {
 		return err
 	}
@@ -144,12 +156,21 @@ func writeProjectStatus(cfg Config, kube *HTTPClient, saToken string, result Res
 
 	return UpsertConfigMap(kube, kubeAPI, cfg.OutputSecretNamespace, saToken, cfg.OutputStatusConfigMap, map[string]string{
 		"result":          "bootstrapped",
-		"message":         "Project bootstrap completed.",
+		"message":         projectStatusMessage(cfg.Mode),
 		"mode":            string(cfg.Mode),
 		"projectId":       result.ProjectID,
 		"projectSlug":     result.ProjectSlug,
 		"identityId":      result.IdentityID,
 		"identityName":    result.IdentityName,
 		"environmentSlug": result.EnvironmentSlug,
+		"organizationIdentityRole": cfg.OrganizationIdentityRole,
+		"projectIdentityRole":      cfg.IdentityRole,
 	}, labels)
+}
+
+func projectStatusMessage(mode Mode) string {
+	if mode == ModeOperator {
+		return "Operator bootstrap completed."
+	}
+	return "Project bootstrap completed."
 }
