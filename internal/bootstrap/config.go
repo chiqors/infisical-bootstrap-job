@@ -49,7 +49,7 @@ type Config struct {
 	OutputProjectSecretKey   string
 	SmokeTestSecretKey       string
 	SmokeTestSecretValue     string
-	Secrets                  map[string]string
+	Secrets                  []SecretSpec
 }
 
 func LoadConfig() Config {
@@ -81,7 +81,7 @@ func LoadConfig() Config {
 		OutputProjectSecretKey:   strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_KEY")),
 		SmokeTestSecretKey:       strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_KEY")),
 		SmokeTestSecretValue:     strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_VALUE")),
-		Secrets:                  loadSecretsMap("SECRETS_JSON"),
+		Secrets:                  loadSecrets("SECRETS_JSON"),
 	}
 
 	cfg.validate()
@@ -173,26 +173,41 @@ func (cfg *Config) requireOperatorFields() {
 	cfg.OutputProjectSecretKey = mustEnv("OUTPUT_PROJECT_SECRET_KEY")
 }
 
-func loadSecretsMap(name string) map[string]string {
+func loadSecrets(name string) []SecretSpec {
 	value := strings.TrimSpace(os.Getenv(name))
 	if value == "" {
 		return nil
 	}
 
-	var secrets map[string]string
-	if err := json.Unmarshal([]byte(value), &secrets); err != nil {
-		panic(fmt.Sprintf("invalid JSON in %s: %v", name, err))
+	var arraySecrets []SecretSpec
+	if err := json.Unmarshal([]byte(value), &arraySecrets); err != nil {
+		panic(fmt.Sprintf("invalid JSON in %s: expected a JSON array of {key,value,path} objects: %v", name, err))
 	}
+	return normalizeSecretSpecs(name, arraySecrets)
+}
 
-	cleaned := make(map[string]string, len(secrets))
-	for key, secretValue := range secrets {
-		trimmedKey := strings.TrimSpace(key)
-		if trimmedKey == "" {
+func normalizeSecretSpecs(name string, specs []SecretSpec) []SecretSpec {
+	cleaned := make([]SecretSpec, 0, len(specs))
+	for _, spec := range specs {
+		spec.Key = strings.TrimSpace(spec.Key)
+		if spec.Key == "" {
 			panic(fmt.Sprintf("%s contains an empty secret key", name))
 		}
-		cleaned[trimmedKey] = secretValue
+		spec.Path = normalizeSecretPath(spec.Path)
+		cleaned = append(cleaned, spec)
 	}
 	return cleaned
+}
+
+func normalizeSecretPath(path string) string {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" || trimmed == "/" {
+		return "/"
+	}
+	if !strings.HasPrefix(trimmed, "/") {
+		trimmed = "/" + trimmed
+	}
+	return strings.TrimRight(trimmed, "/")
 }
 
 func mustEnv(name string) string {

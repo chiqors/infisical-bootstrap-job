@@ -282,19 +282,20 @@ func EnsureKubernetesAuth(c *HTTPClient, infisicalURL string, headers map[string
 	return err
 }
 
-func EnsureSecretValue(c *HTTPClient, infisicalURL string, headers map[string]string, projectID, environmentSlug, secretKey, secretValue string) error {
+func EnsureSecretValue(c *HTTPClient, infisicalURL string, headers map[string]string, projectID, environmentSlug, secretKey, secretValue, secretPath string) error {
+	secretPath = normalizeSecretPath(secretPath)
 	getURL := fmt.Sprintf("%s/api/v4/secrets/%s?projectId=%s&environment=%s&secretPath=%s",
 		infisicalURL,
 		url.PathEscape(secretKey),
 		url.QueryEscape(projectID),
 		url.QueryEscape(environmentSlug),
-		url.QueryEscape("/"),
+		url.QueryEscape(secretPath),
 	)
 	if _, err := c.JSONRequest(http.MethodGet, getURL, headers, nil); err == nil {
 		_, err := c.JSONRequest(http.MethodPatch, fmt.Sprintf("%s/api/v4/secrets/%s", infisicalURL, url.PathEscape(secretKey)), headers, mustMarshal(map[string]any{
 			"projectId":   projectID,
 			"environment": environmentSlug,
-			"secretPath":  "/",
+			"secretPath":  secretPath,
 			"secretValue": secretValue,
 			"type":        "shared",
 		}))
@@ -303,7 +304,7 @@ func EnsureSecretValue(c *HTTPClient, infisicalURL string, headers map[string]st
 	_, err := c.JSONRequest(http.MethodPost, fmt.Sprintf("%s/api/v4/secrets/%s", infisicalURL, url.PathEscape(secretKey)), headers, mustMarshal(map[string]any{
 		"projectId":   projectID,
 		"environment": environmentSlug,
-		"secretPath":  "/",
+		"secretPath":  secretPath,
 		"secretKey":   secretKey,
 		"secretValue": secretValue,
 		"type":        "shared",

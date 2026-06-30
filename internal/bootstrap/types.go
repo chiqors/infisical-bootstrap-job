@@ -93,6 +93,12 @@ type Membership struct {
 	} `json:"roles"`
 }
 
+type SecretSpec struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Path  string `json:"path"`
+}
+
 type Result struct {
 	ProjectID       string `json:"projectId"`
 	ProjectSlug     string `json:"projectSlug"`

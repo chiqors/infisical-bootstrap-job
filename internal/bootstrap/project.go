@@ -67,13 +67,13 @@ func runProjectLike(cfg Config) error {
 	}
 
 	if cfg.SmokeTestSecretKey != "" && cfg.SmokeTestSecretValue != "" {
-		if err := EnsureSecretValue(api, cfg.InfisicalURL, headers, project.ID, cfg.EnvironmentSlug, cfg.SmokeTestSecretKey, cfg.SmokeTestSecretValue); err != nil {
+		if err := EnsureSecretValue(api, cfg.InfisicalURL, headers, project.ID, cfg.EnvironmentSlug, cfg.SmokeTestSecretKey, cfg.SmokeTestSecretValue, "/"); err != nil {
 			return err
 		}
 	}
 
-	for secretKey, secretValue := range cfg.Secrets {
-		if err := EnsureSecretValue(api, cfg.InfisicalURL, headers, project.ID, cfg.EnvironmentSlug, secretKey, secretValue); err != nil {
+	for _, secret := range cfg.Secrets {
+		if err := EnsureSecretValue(api, cfg.InfisicalURL, headers, project.ID, cfg.EnvironmentSlug, secret.Key, secret.Value, secret.Path); err != nil {
 			return err
 		}
 	}

@@ -125,14 +125,23 @@ Optional environment variables:
 - `SMOKE_TEST_SECRET_VALUE`
 - `SECRETS_JSON`
 
-`SECRETS_JSON` should be a JSON object of secret key/value pairs to upsert into the target project and environment, for example:
+`SECRETS_JSON` must be a path-aware JSON array:
 
 ```json
-{
-  "config-yaml": "Database:\n  Postgres:\n    DSN: postgresql://...",
-  "masterkey": "abcdefghijklmnopqrstuvwxyzABCDEF"
-}
+[
+  {
+    "key": "INFISICAL_OPERATOR_TEST",
+    "value": "ok"
+  },
+  {
+    "key": "test-file-in-folder",
+    "value": "hello",
+    "path": "/test-folder"
+  }
+]
 ```
+
+`path` is optional. If omitted or empty, it defaults to `/`. Writing a secret to a non-root `path` is what makes that folder-style path appear in the Infisical UI.
 
 ## Notes
 

@@ -61,4 +61,4 @@ spec:
               value: ok
             - name: SECRETS_JSON
               value: |
-                {"config-yaml":"Database:\n  Postgres:\n    DSN: postgresql://postgres:replace-me@pgcluster-rw.cnpg.svc:5432/zitadel?sslmode=disable","masterkey":"replace-with-32-byte-masterkey"}
+                [{"key":"config-yaml","value":"Database:\n  Postgres:\n    DSN: postgresql://postgres:replace-me@pgcluster-rw.cnpg.svc:5432/zitadel?sslmode=disable"},{"key":"masterkey","value":"replace-with-32-byte-masterkey"},{"key":"test-file-in-folder","value":"hello-from-bootstrap","path":"/test-folder"}]
