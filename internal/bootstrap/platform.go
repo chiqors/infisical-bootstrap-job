@@ -43,7 +43,8 @@ func isAlreadyBootstrappedError(err error) bool {
 		return strings.Contains(body, "already bootstrapped") ||
 			strings.Contains(body, "has already been bootstrapped") ||
 			strings.Contains(body, "instance already bootstrapped") ||
-			strings.Contains(body, "admin account has already been created")
+			strings.Contains(body, "admin account has already been created") ||
+			strings.Contains(body, "instance has already been set up")
 	}
 
 	return false
