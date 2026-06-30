@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: infisical-bootstrap-job
+  namespace: default
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: bootstrap
+          image: ghcr.io/your-org/infisical-bootstrap-job:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: INFISICAL_URL
+              value: https://vault.k8s.chiqors.my.id
+            - name: INFISICAL_EMAIL
+              value: replace-with-admin-email
+            - name: INFISICAL_PASSWORD
+              value: replace-with-admin-password
+            - name: ORGANIZATION_ID
+              value: replace-with-organization-id
+            - name: PROJECT_NAME
+              value: zitadel
+            - name: PROJECT_SLUG
+              value: zitadel
+            - name: ENVIRONMENT_NAME
+              value: dev
+            - name: ENVIRONMENT_SLUG
+              value: dev
+            - name: IDENTITY_NAME
+              value: infisical-kubernetes-operator
+            - name: IDENTITY_ROLE
+              value: member
+            - name: ENABLE_KUBERNETES_AUTH
+              value: "true"
+            - name: KUBERNETES_AUTH_HOST
+              value: https://replace-with-cluster-api-endpoint
+            - name: ALLOWED_NAMESPACES
+              value: zitadel
+            - name: ALLOWED_SERVICE_ACCOUNTS
+              value: default
+            - name: WRITE_KUBERNETES_SECRET
+              value: "true"
+            - name: OUTPUT_SECRET_NAMESPACE
+              value: default
+            - name: OUTPUT_SECRET_NAME
+              value: infisical-identity
+            - name: OUTPUT_SECRET_KEY
+              value: identityId
+            - name: OUTPUT_PROJECT_SECRET_NAME
+              value: infisical-project
+            - name: OUTPUT_PROJECT_SECRET_KEY
+              value: projectId
+            - name: SMOKE_TEST_SECRET_KEY
+              value: INFISICAL_BOOTSTRAP_TEST
+            - name: SMOKE_TEST_SECRET_VALUE
+              value: ok
