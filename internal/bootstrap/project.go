@@ -40,7 +40,7 @@ func runProject(cfg Config) error {
 	var kube *HTTPClient
 	var saToken string
 	var caCert string
-	if cfg.EnableKubernetesAuth || cfg.WriteKubernetesSecret {
+	if cfg.EnableKubernetesAuth || cfg.WriteKubernetesSecret || cfg.OutputStatusConfigMap != "" {
 		var kubeErr error
 		kube, saToken, caCert, kubeErr = NewKubeHTTPClient()
 		if kubeErr != nil {
@@ -91,6 +91,11 @@ func runProject(cfg Config) error {
 		IdentityName:    identityName,
 		EnvironmentSlug: cfg.EnvironmentSlug,
 	}
+
+	if err := writeProjectStatus(cfg, kube, saToken, result); err != nil {
+		return err
+	}
+
 	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
@@ -121,4 +126,30 @@ func hydrateProjectCredentials(cfg *Config) error {
 	cfg.InfisicalEmail = email
 	cfg.InfisicalPassword = password
 	return nil
+}
+
+func writeProjectStatus(cfg Config, kube *HTTPClient, saToken string, result Result) error {
+	if cfg.OutputStatusConfigMap == "" {
+		return nil
+	}
+	if kube == nil {
+		return fmt.Errorf("OUTPUT_STATUS_CONFIGMAP requires in-cluster Kubernetes access")
+	}
+
+	kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+	labels := map[string]string{
+		"homelab.io/app":      cfg.ProjectSlug,
+		"homelab.io/category": "platform",
+	}
+
+	return UpsertConfigMap(kube, kubeAPI, cfg.OutputSecretNamespace, saToken, cfg.OutputStatusConfigMap, map[string]string{
+		"result":          "bootstrapped",
+		"message":         "Project bootstrap completed.",
+		"mode":            string(cfg.Mode),
+		"projectId":       result.ProjectID,
+		"projectSlug":     result.ProjectSlug,
+		"identityId":      result.IdentityID,
+		"identityName":    result.IdentityName,
+		"environmentSlug": result.EnvironmentSlug,
+	}, labels)
 }
