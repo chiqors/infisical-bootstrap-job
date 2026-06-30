@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: infisical-platform-bootstrap-job
+  namespace: infisical
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: infisical-infisical
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      initContainers:
+        - name: wait-for-infisical
+          image: curlimages/curl:8.14.1
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "Waiting for Infisical to be ready..."
+              until curl -fsS http://infisical-infisical-standalone-infisical:8080/api/status >/dev/null; do
+                echo "Infisical not ready yet, retrying in 10 seconds..."
+                sleep 10
+              done
+              echo "Infisical is ready. Proceeding with platform bootstrap..."
+      containers:
+        - name: bootstrap
+          image: ghcr.io/your-org/infisical-bootstrap-job:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: BOOTSTRAP_MODE
+              value: platform
+            - name: INFISICAL_URL
+              value: http://infisical-infisical-standalone-infisical.infisical.svc:8080
+            - name: BOOTSTRAP_EMAIL
+              value: replace-with-admin-email
+            - name: BOOTSTRAP_PASSWORD
+              value: replace-with-admin-password
+            - name: ORGANIZATION_NAME
+              value: homelab
+            - name: IGNORE_IF_BOOTSTRAPPED
+              value: "true"
+            - name: WRITE_KUBERNETES_SECRET
+              value: "true"
+            - name: OUTPUT_SECRET_NAMESPACE
+              value: infisical
+            - name: OUTPUT_SECRET_NAME
+              value: infisical-bootstrap-token
+            - name: OUTPUT_SECRET_KEY
+              value: token

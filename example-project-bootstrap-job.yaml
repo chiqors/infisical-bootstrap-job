@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: infisical-bootstrap-job
+  name: infisical-project-bootstrap-job
   namespace: default
 spec:
   backoffLimit: 3
@@ -13,6 +13,8 @@ spec:
           image: ghcr.io/your-org/infisical-bootstrap-job:latest
           imagePullPolicy: IfNotPresent
           env:
+            - name: BOOTSTRAP_MODE
+              value: project
             - name: INFISICAL_URL
               value: https://vault.k8s.chiqors.my.id
             - name: INFISICAL_EMAIL
@@ -57,3 +59,6 @@ spec:
               value: INFISICAL_BOOTSTRAP_TEST
             - name: SMOKE_TEST_SECRET_VALUE
               value: ok
+            - name: SECRETS_JSON
+              value: |
+                {"config-yaml":"Database:\n  Postgres:\n    DSN: postgresql://postgres:replace-me@pgcluster-rw.cnpg.svc:5432/zitadel?sslmode=disable","masterkey":"replace-with-32-byte-masterkey"}

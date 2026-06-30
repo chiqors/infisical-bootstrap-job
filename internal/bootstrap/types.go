@@ -19,6 +19,44 @@ type LoginResponse struct {
 	AccessToken string `json:"accessToken"`
 }
 
+type BootstrapInstanceRequest struct {
+	Email        string `json:"email"`
+	Password     string `json:"password"`
+	Organization string `json:"organization"`
+}
+
+type BootstrapInstanceResponse struct {
+	Message      string                `json:"message"`
+	User         BootstrapUser         `json:"user"`
+	Organization BootstrapOrganization `json:"organization"`
+	Identity     BootstrapIdentity     `json:"identity"`
+}
+
+type BootstrapUser struct {
+	Username   string `json:"username"`
+	ID         string `json:"id"`
+	FirstName  string `json:"firstName"`
+	LastName   string `json:"lastName"`
+	Email      string `json:"email"`
+	SuperAdmin bool   `json:"superAdmin"`
+}
+
+type BootstrapOrganization struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+
+type BootstrapIdentity struct {
+	ID          string                      `json:"id"`
+	Name        string                      `json:"name"`
+	Credentials BootstrapIdentityCredential `json:"credentials"`
+}
+
+type BootstrapIdentityCredential struct {
+	Token string `json:"token"`
+}
+
 type SelectOrgResponse struct {
 	Token string `json:"token"`
 }

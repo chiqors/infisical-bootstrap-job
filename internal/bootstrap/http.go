@@ -15,6 +15,17 @@ type HTTPClient struct {
 	client *http.Client
 }
 
+type HTTPError struct {
+	StatusCode int
+	Method     string
+	URL        string
+	Body       string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("%s %s failed with status %d: %s", e.Method, e.URL, e.StatusCode, e.Body)
+}
+
 func NewHTTPClient() *HTTPClient {
 	return &HTTPClient{
 		client: &http.Client{Timeout: 30 * time.Second},
@@ -75,7 +86,12 @@ func (c *HTTPClient) JSONRequest(method, rawURL string, headers map[string]strin
 		return nil, err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%s %s failed: %s", method, rawURL, string(bytes.TrimSpace(payload)))
+		return nil, &HTTPError{
+			StatusCode: resp.StatusCode,
+			Method:     method,
+			URL:        rawURL,
+			Body:       string(bytes.TrimSpace(payload)),
+		}
 	}
 	return payload, nil
 }

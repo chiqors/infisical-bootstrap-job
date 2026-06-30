@@ -36,6 +36,22 @@ func LoginWithPassword(c *HTTPClient, infisicalURL, email, password string) (str
 	return resp.AccessToken, nil
 }
 
+func BootstrapInstance(c *HTTPClient, infisicalURL string, req BootstrapInstanceRequest) (BootstrapInstanceResponse, error) {
+	payload, err := c.JSONRequest(http.MethodPost, infisicalURL+"/api/v1/admin/bootstrap", map[string]string{
+		"Accept":     "application/json",
+		"User-Agent": "infisical-bootstrap-job",
+	}, mustMarshal(req))
+	if err != nil {
+		return BootstrapInstanceResponse{}, err
+	}
+
+	var resp BootstrapInstanceResponse
+	if err := unmarshalInto(payload, &resp); err != nil {
+		return BootstrapInstanceResponse{}, err
+	}
+	return resp, nil
+}
+
 func SelectOrganization(c *HTTPClient, infisicalURL, accessToken, organizationID string) (string, error) {
 	payload, err := c.JSONRequest(http.MethodPost, infisicalURL+"/api/v3/auth/select-organization", map[string]string{
 		"Authorization": "Bearer " + accessToken,
