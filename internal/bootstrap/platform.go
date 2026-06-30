@@ -10,6 +10,10 @@ import (
 
 func runPlatform(cfg Config) error {
 	api := NewHTTPClient()
+	kube, saToken, kubeAPI, err := maybeKubeWriters(cfg)
+	if err != nil {
+		return err
+	}
 
 	resp, err := BootstrapInstance(api, cfg.InfisicalURL, BootstrapInstanceRequest{
 		Email:        cfg.BootstrapEmail,
@@ -18,15 +22,38 @@ func runPlatform(cfg Config) error {
 	})
 	if err != nil {
 		if cfg.IgnoreIfBootstrapped && isAlreadyBootstrappedError(err) {
+			if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, map[string]string{
+				"result":       "already-set-up",
+				"message":      "Platform bootstrap skipped because the Infisical instance was already set up.",
+				"mode":         string(cfg.Mode),
+				"infisicalUrl": cfg.InfisicalURL,
+			}); err != nil {
+				return err
+			}
 			return nil
 		}
 		return err
 	}
 
 	if cfg.WriteKubernetesSecret {
-		if err := writeBootstrapOutputs(cfg, resp); err != nil {
+		if err := writeBootstrapOutputs(cfg, kube, kubeAPI, saToken, resp); err != nil {
 			return err
 		}
+	}
+
+	if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, map[string]string{
+		"result":           "bootstrapped",
+		"message":          "Platform bootstrap completed and returned a bootstrap identity token.",
+		"mode":             string(cfg.Mode),
+		"infisicalUrl":     cfg.InfisicalURL,
+		"organizationId":   resp.Organization.ID,
+		"organizationName": resp.Organization.Name,
+		"organizationSlug": resp.Organization.Slug,
+		"identityId":       resp.Identity.ID,
+		"identityName":     resp.Identity.Name,
+		"userEmail":        resp.User.Email,
+	}); err != nil {
+		return err
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(resp)
@@ -50,13 +77,7 @@ func isAlreadyBootstrappedError(err error) bool {
 	return false
 }
 
-func writeBootstrapOutputs(cfg Config, resp BootstrapInstanceResponse) error {
-	kube, saToken, _, err := NewKubeHTTPClient()
-	if err != nil {
-		return err
-	}
-
-	kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+func writeBootstrapOutputs(cfg Config, kube *HTTPClient, kubeAPI, saToken string, resp BootstrapInstanceResponse) error {
 	labels := map[string]string{
 		"homelab.io/app":      "infisical",
 		"homelab.io/category": "platform",
@@ -72,4 +93,32 @@ func writeBootstrapOutputs(cfg Config, resp BootstrapInstanceResponse) error {
 		resp.Identity.Credentials.Token,
 		labels,
 	)
+}
+
+func writePlatformStatus(cfg Config, kube *HTTPClient, kubeAPI, saToken string, data map[string]string) error {
+	if cfg.OutputStatusConfigMap == "" {
+		return nil
+	}
+	if kube == nil {
+		return fmt.Errorf("OUTPUT_STATUS_CONFIGMAP requires in-cluster Kubernetes access")
+	}
+
+	labels := map[string]string{
+		"homelab.io/app":      "infisical",
+		"homelab.io/category": "platform",
+	}
+	return UpsertConfigMap(kube, kubeAPI, cfg.OutputSecretNamespace, saToken, cfg.OutputStatusConfigMap, data, labels)
+}
+
+func maybeKubeWriters(cfg Config) (*HTTPClient, string, string, error) {
+	if !cfg.WriteKubernetesSecret && cfg.OutputStatusConfigMap == "" {
+		return nil, "", "", nil
+	}
+
+	kube, saToken, _, err := NewKubeHTTPClient()
+	if err != nil {
+		return nil, "", "", err
+	}
+	kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+	return kube, saToken, kubeAPI, nil
 }

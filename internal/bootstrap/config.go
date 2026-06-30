@@ -38,6 +38,7 @@ type Config struct {
 	OutputSecretNamespace   string
 	OutputSecretName        string
 	OutputSecretKey         string
+	OutputStatusConfigMap   string
 	OutputProjectSecretName string
 	OutputProjectSecretKey  string
 	SmokeTestSecretKey      string
@@ -64,6 +65,7 @@ func LoadConfig() Config {
 		IdentityRole:            strings.TrimSpace(os.Getenv("IDENTITY_ROLE")),
 		EnableKubernetesAuth:    envBool("ENABLE_KUBERNETES_AUTH", false),
 		WriteKubernetesSecret:   envBool("WRITE_KUBERNETES_SECRET", false),
+		OutputStatusConfigMap:   strings.TrimSpace(os.Getenv("OUTPUT_STATUS_CONFIGMAP")),
 		OutputProjectSecretName: strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_NAME")),
 		OutputProjectSecretKey:  strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_KEY")),
 		SmokeTestSecretKey:      strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_KEY")),

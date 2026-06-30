@@ -40,3 +40,35 @@ func UpsertSecret(c *HTTPClient, kubeAPI, namespace, token, name, key, value str
 	_, err = c.JSONRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/namespaces/%s/secrets", kubeAPI, namespace), BearerHeaders(token), mustMarshal(body))
 	return err
 }
+
+func UpsertConfigMap(c *HTTPClient, kubeAPI, namespace, token, name string, data map[string]string, labels map[string]string) error {
+	configMapURL := fmt.Sprintf("%s/api/v1/namespaces/%s/configmaps/%s", kubeAPI, namespace, name)
+	body := map[string]any{
+		"apiVersion": "v1",
+		"kind":       "ConfigMap",
+		"metadata": map[string]any{
+			"name":      name,
+			"namespace": namespace,
+			"labels":    labels,
+		},
+		"data": data,
+	}
+
+	payload, err := c.JSONRequest(http.MethodGet, configMapURL, BearerHeaders(token), nil)
+	if err == nil {
+		var existing map[string]any
+		if err := unmarshalInto(payload, &existing); err != nil {
+			return err
+		}
+		if metadata, ok := existing["metadata"].(map[string]any); ok {
+			if rv, ok := metadata["resourceVersion"].(string); ok {
+				body["metadata"].(map[string]any)["resourceVersion"] = rv
+			}
+		}
+		_, err := c.JSONRequest(http.MethodPut, configMapURL, BearerHeaders(token), mustMarshal(body))
+		return err
+	}
+
+	_, err = c.JSONRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/namespaces/%s/configmaps", kubeAPI, namespace), BearerHeaders(token), mustMarshal(body))
+	return err
+}
