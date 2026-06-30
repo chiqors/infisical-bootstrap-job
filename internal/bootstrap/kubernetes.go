@@ -6,6 +6,31 @@ import (
 	"net/http"
 )
 
+func GetSecretData(c *HTTPClient, kubeAPI, namespace, token, name string) (map[string]string, error) {
+	secretURL := fmt.Sprintf("%s/api/v1/namespaces/%s/secrets/%s", kubeAPI, namespace, name)
+	payload, err := c.JSONRequest(http.MethodGet, secretURL, BearerHeaders(token), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var secret struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := unmarshalInto(payload, &secret); err != nil {
+		return nil, err
+	}
+
+	decoded := make(map[string]string, len(secret.Data))
+	for key, value := range secret.Data {
+		raw, err := base64.StdEncoding.DecodeString(value)
+		if err != nil {
+			return nil, err
+		}
+		decoded[key] = string(raw)
+	}
+	return decoded, nil
+}
+
 func UpsertSecret(c *HTTPClient, kubeAPI, namespace, token, name, key, value string, labels map[string]string) error {
 	secretURL := fmt.Sprintf("%s/api/v1/namespaces/%s/secrets/%s", kubeAPI, namespace, name)
 	body := map[string]any{

@@ -23,6 +23,10 @@ type Config struct {
 	IgnoreIfBootstrapped    bool
 	InfisicalEmail          string
 	InfisicalPassword       string
+	BootstrapSecretNamespace string
+	BootstrapSecretName      string
+	BootstrapEmailKey        string
+	BootstrapPasswordKey     string
 	OrganizationID          string
 	ProjectName             string
 	ProjectSlug             string
@@ -56,6 +60,10 @@ func LoadConfig() Config {
 		IgnoreIfBootstrapped:    envBool("IGNORE_IF_BOOTSTRAPPED", false),
 		InfisicalEmail:          strings.TrimSpace(os.Getenv("INFISICAL_EMAIL")),
 		InfisicalPassword:       strings.TrimSpace(os.Getenv("INFISICAL_PASSWORD")),
+		BootstrapSecretNamespace: strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAMESPACE")),
+		BootstrapSecretName:      strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAME")),
+		BootstrapEmailKey:        strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_EMAIL_KEY")),
+		BootstrapPasswordKey:     strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_PASSWORD_KEY")),
 		OrganizationID:          strings.TrimSpace(os.Getenv("ORGANIZATION_ID")),
 		ProjectName:             strings.TrimSpace(os.Getenv("PROJECT_NAME")),
 		ProjectSlug:             strings.TrimSpace(os.Getenv("PROJECT_SLUG")),
@@ -119,8 +127,19 @@ func (cfg *Config) requirePlatformFields() {
 }
 
 func (cfg *Config) requireProjectFields() {
-	cfg.InfisicalEmail = mustEnv("INFISICAL_EMAIL")
-	cfg.InfisicalPassword = mustEnv("INFISICAL_PASSWORD")
+	if cfg.BootstrapSecretNamespace != "" || cfg.BootstrapSecretName != "" {
+		cfg.BootstrapSecretNamespace = mustEnv("BOOTSTRAP_SECRET_NAMESPACE")
+		cfg.BootstrapSecretName = mustEnv("BOOTSTRAP_SECRET_NAME")
+		if cfg.BootstrapEmailKey == "" {
+			cfg.BootstrapEmailKey = "email"
+		}
+		if cfg.BootstrapPasswordKey == "" {
+			cfg.BootstrapPasswordKey = "password"
+		}
+	} else {
+		cfg.InfisicalEmail = mustEnv("INFISICAL_EMAIL")
+		cfg.InfisicalPassword = mustEnv("INFISICAL_PASSWORD")
+	}
 	cfg.OrganizationID = mustEnv("ORGANIZATION_ID")
 	cfg.ProjectName = mustEnv("PROJECT_NAME")
 	cfg.ProjectSlug = mustEnv("PROJECT_SLUG")

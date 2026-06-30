@@ -8,6 +8,9 @@ import (
 
 func runProject(cfg Config) error {
 	api := NewHTTPClient()
+	if err := hydrateProjectCredentials(&cfg); err != nil {
+		return err
+	}
 
 	sessionToken, err := LoginWithPassword(api, cfg.InfisicalURL, cfg.InfisicalEmail, cfg.InfisicalPassword)
 	if err != nil {
@@ -89,4 +92,33 @@ func runProject(cfg Config) error {
 		EnvironmentSlug: cfg.EnvironmentSlug,
 	}
 	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func hydrateProjectCredentials(cfg *Config) error {
+	if cfg.InfisicalEmail != "" && cfg.InfisicalPassword != "" {
+		return nil
+	}
+
+	kube, saToken, _, err := NewKubeHTTPClient()
+	if err != nil {
+		return err
+	}
+	kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+	data, err := GetSecretData(kube, kubeAPI, cfg.BootstrapSecretNamespace, saToken, cfg.BootstrapSecretName)
+	if err != nil {
+		return err
+	}
+
+	email := data[cfg.BootstrapEmailKey]
+	password := data[cfg.BootstrapPasswordKey]
+	if email == "" {
+		return fmt.Errorf("missing %q in secret %s/%s", cfg.BootstrapEmailKey, cfg.BootstrapSecretNamespace, cfg.BootstrapSecretName)
+	}
+	if password == "" {
+		return fmt.Errorf("missing %q in secret %s/%s", cfg.BootstrapPasswordKey, cfg.BootstrapSecretNamespace, cfg.BootstrapSecretName)
+	}
+
+	cfg.InfisicalEmail = email
+	cfg.InfisicalPassword = password
+	return nil
 }
