@@ -100,9 +100,21 @@ type SecretSpec struct {
 }
 
 type Result struct {
-	ProjectID       string `json:"projectId"`
-	ProjectSlug     string `json:"projectSlug"`
-	IdentityID      string `json:"identityId"`
-	IdentityName    string `json:"identityName"`
-	EnvironmentSlug string `json:"environmentSlug"`
+	ProjectID                 string `json:"projectId"`
+	ProjectSlug               string `json:"projectSlug"`
+	IdentityID                string `json:"identityId"`
+	IdentityName              string `json:"identityName"`
+	EnvironmentSlug           string `json:"environmentSlug"`
+	UniversalAuthClientID     string `json:"universalAuthClientId,omitempty"`
+	UniversalAuthClientSecret string `json:"universalAuthClientSecret,omitempty"`
+}
+
+type UniversalAuthConfigResponse struct {
+	IdentityUniversalAuth struct {
+		ClientID string `json:"clientId"`
+	} `json:"identityUniversalAuth"`
+}
+
+type CreateUniversalAuthClientSecretResponse struct {
+	ClientSecret string `json:"clientSecret"`
 }

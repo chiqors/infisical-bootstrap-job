@@ -112,6 +112,7 @@ Optional environment variables:
 
 - `IDENTITY_ROLE`
 - `ENABLE_KUBERNETES_AUTH`
+- `ENABLE_UNIVERSAL_AUTH`
 - `KUBERNETES_AUTH_HOST`
 - `ALLOWED_NAMESPACES`
 - `ALLOWED_SERVICE_ACCOUNTS`
@@ -124,6 +125,8 @@ Optional environment variables:
 - `SMOKE_TEST_SECRET_KEY`
 - `SMOKE_TEST_SECRET_VALUE`
 - `SECRETS_JSON`
+
+When `ENABLE_UNIVERSAL_AUTH=true`, the job also attaches Universal Auth to the machine identity, creates a fresh client secret, and prints `universalAuthClientId` plus `universalAuthClientSecret` in the JSON result. This is useful for wiring Agent Vault to an Infisical-backed vault in automation.
 
 `SECRETS_JSON` must be a path-aware JSON array:
 

@@ -37,6 +37,7 @@ type Config struct {
 	OrganizationIdentityRole string
 	IdentityRole             string
 	EnableKubernetesAuth     bool
+	EnableUniversalAuth      bool
 	KubernetesAuthHost       string
 	AllowedNamespaces        string
 	AllowedServiceAccounts   string
@@ -75,6 +76,7 @@ func LoadConfig() Config {
 		OrganizationIdentityRole: strings.TrimSpace(os.Getenv("ORGANIZATION_IDENTITY_ROLE")),
 		IdentityRole:             strings.TrimSpace(os.Getenv("IDENTITY_ROLE")),
 		EnableKubernetesAuth:     envBool("ENABLE_KUBERNETES_AUTH", false),
+		EnableUniversalAuth:      envBool("ENABLE_UNIVERSAL_AUTH", false),
 		WriteKubernetesSecret:    envBool("WRITE_KUBERNETES_SECRET", false),
 		OutputStatusConfigMap:    strings.TrimSpace(os.Getenv("OUTPUT_STATUS_CONFIGMAP")),
 		OutputProjectSecretName:  strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_NAME")),

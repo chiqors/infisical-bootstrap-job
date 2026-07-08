@@ -282,6 +282,64 @@ func EnsureKubernetesAuth(c *HTTPClient, infisicalURL string, headers map[string
 	return err
 }
 
+func EnsureUniversalAuth(c *HTTPClient, infisicalURL string, headers map[string]string, identityID string) (string, error) {
+	getURL := fmt.Sprintf("%s/api/v1/auth/universal-auth/identities/%s", infisicalURL, identityID)
+	payload, err := c.JSONRequest(http.MethodGet, getURL, headers, nil)
+	if err == nil {
+		var resp UniversalAuthConfigResponse
+		if err := unmarshalInto(payload, &resp); err != nil {
+			return "", err
+		}
+		return resp.IdentityUniversalAuth.ClientID, nil
+	}
+
+	body := mustMarshal(map[string]any{
+		"clientSecretTrustedIps": []map[string]string{
+			{"ipAddress": "0.0.0.0/0"},
+			{"ipAddress": "::/0"},
+		},
+		"accessTokenTrustedIps": []map[string]string{
+			{"ipAddress": "0.0.0.0/0"},
+			{"ipAddress": "::/0"},
+		},
+		"accessTokenTTL":          2592000,
+		"accessTokenMaxTTL":       2592000,
+		"accessTokenNumUsesLimit": 0,
+	})
+	payload, err = c.JSONRequest(http.MethodPost, getURL, headers, body)
+	if err != nil {
+		return "", err
+	}
+
+	var resp UniversalAuthConfigResponse
+	if err := unmarshalInto(payload, &resp); err != nil {
+		return "", err
+	}
+	return resp.IdentityUniversalAuth.ClientID, nil
+}
+
+func CreateUniversalAuthClientSecret(c *HTTPClient, infisicalURL string, headers map[string]string, identityID string) (string, error) {
+	payload, err := c.JSONRequest(
+		http.MethodPost,
+		fmt.Sprintf("%s/api/v1/auth/universal-auth/identities/%s/client-secrets", infisicalURL, identityID),
+		headers,
+		mustMarshal(map[string]any{
+			"description":  "",
+			"numUsesLimit": 0,
+			"ttl":          0,
+		}),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	var resp CreateUniversalAuthClientSecretResponse
+	if err := unmarshalInto(payload, &resp); err != nil {
+		return "", err
+	}
+	return resp.ClientSecret, nil
+}
+
 func EnsureSecretValue(c *HTTPClient, infisicalURL string, headers map[string]string, projectID, environmentSlug, secretKey, secretValue, secretPath string) error {
 	secretPath = normalizeSecretPath(secretPath)
 	getURL := fmt.Sprintf("%s/api/v4/secrets/%s?projectId=%s&environment=%s&secretPath=%s",

@@ -66,6 +66,19 @@ func runProjectLike(cfg Config) error {
 		}
 	}
 
+	universalAuthClientID := ""
+	universalAuthClientSecret := ""
+	if cfg.EnableUniversalAuth {
+		universalAuthClientID, err = EnsureUniversalAuth(api, cfg.InfisicalURL, headers, identityID)
+		if err != nil {
+			return err
+		}
+		universalAuthClientSecret, err = CreateUniversalAuthClientSecret(api, cfg.InfisicalURL, headers, identityID)
+		if err != nil {
+			return err
+		}
+	}
+
 	if cfg.SmokeTestSecretKey != "" && cfg.SmokeTestSecretValue != "" {
 		if err := EnsureSecretValue(api, cfg.InfisicalURL, headers, project.ID, cfg.EnvironmentSlug, cfg.SmokeTestSecretKey, cfg.SmokeTestSecretValue, "/"); err != nil {
 			return err
@@ -97,11 +110,13 @@ func runProjectLike(cfg Config) error {
 	}
 
 	result := Result{
-		ProjectID:       project.ID,
-		ProjectSlug:     project.Slug,
-		IdentityID:      identityID,
-		IdentityName:    identityName,
-		EnvironmentSlug: cfg.EnvironmentSlug,
+		ProjectID:                 project.ID,
+		ProjectSlug:               project.Slug,
+		IdentityID:                identityID,
+		IdentityName:              identityName,
+		EnvironmentSlug:           cfg.EnvironmentSlug,
+		UniversalAuthClientID:     universalAuthClientID,
+		UniversalAuthClientSecret: universalAuthClientSecret,
 	}
 
 	if err := writeProjectStatus(cfg, kube, saToken, result); err != nil {
@@ -155,14 +170,14 @@ func writeProjectStatus(cfg Config, kube *HTTPClient, saToken string, result Res
 	}
 
 	return UpsertConfigMap(kube, kubeAPI, cfg.OutputSecretNamespace, saToken, cfg.OutputStatusConfigMap, map[string]string{
-		"result":          "bootstrapped",
-		"message":         projectStatusMessage(cfg.Mode),
-		"mode":            string(cfg.Mode),
-		"projectId":       result.ProjectID,
-		"projectSlug":     result.ProjectSlug,
-		"identityId":      result.IdentityID,
-		"identityName":    result.IdentityName,
-		"environmentSlug": result.EnvironmentSlug,
+		"result":                   "bootstrapped",
+		"message":                  projectStatusMessage(cfg.Mode),
+		"mode":                     string(cfg.Mode),
+		"projectId":                result.ProjectID,
+		"projectSlug":              result.ProjectSlug,
+		"identityId":               result.IdentityID,
+		"identityName":             result.IdentityName,
+		"environmentSlug":          result.EnvironmentSlug,
 		"organizationIdentityRole": cfg.OrganizationIdentityRole,
 		"projectIdentityRole":      cfg.IdentityRole,
 	}, labels)
