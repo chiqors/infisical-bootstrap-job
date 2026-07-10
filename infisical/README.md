@@ -29,7 +29,7 @@ It supports two entrypoints:
 ## Build
 
 ```bash
-docker build -t your-registry/infisical-bootstrap-job:latest -f infisical-bootstrap-job/infisical/Dockerfile .
+docker build -t your-registry/infisical-bootstrap-job:latest -f infisical/Dockerfile .
 ```
 
 The default image entrypoint is `infisical-bootstrap-job`.
