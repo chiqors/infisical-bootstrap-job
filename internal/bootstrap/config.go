@@ -177,15 +177,19 @@ func (cfg *Config) requireOperatorFields() {
 
 func loadSecrets(name string) []SecretSpec {
 	value := strings.TrimSpace(os.Getenv(name))
+	return LoadSecretsFromString(value)
+}
+
+func LoadSecretsFromString(value string) []SecretSpec {
 	if value == "" {
 		return nil
 	}
 
 	var arraySecrets []SecretSpec
 	if err := json.Unmarshal([]byte(value), &arraySecrets); err != nil {
-		panic(fmt.Sprintf("invalid JSON in %s: expected a JSON array of {key,value,path} objects: %v", name, err))
+		panic(fmt.Sprintf("invalid JSON in secrets payload: expected a JSON array of {key,value,path} objects: %v", err))
 	}
-	return normalizeSecretSpecs(name, arraySecrets)
+	return normalizeSecretSpecs("secrets", arraySecrets)
 }
 
 func normalizeSecretSpecs(name string, specs []SecretSpec) []SecretSpec {

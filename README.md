@@ -1,156 +1,155 @@
-# Infisical Bootstrap Job
+# infisical-bootstrap-job
 
-This folder contains standalone source code for an Infisical bootstrap job image.
+Reusable Go bootstrap jobs for:
 
-Intent:
+- Infisical
+- Agent Vault
+
+This repository is intended for automation scenarios where you want to stand up Infisical and then bootstrap the downstream resources needed by Agent Vault or other systems.
+
+## What Is In This Repo
+
+This repo contains two job families:
+
+- `infisical/`: bootstraps Infisical itself
+- `agentvault/`: bootstraps Agent Vault against an already running Agent Vault server
+
+It also contains shared packages used by both:
+
+- `internal/bootstrap`: reusable Infisical bootstrap logic
+- `internal/jobhandoff`: small metadata and env helpers used when one bootstrap step hands data to another
+
+## Repository Layout
+
+```text
+.
+├── agentvault/
+│   ├── main.go
+│   ├── Dockerfile
+│   └── launcher/
+├── infisical/
+│   ├── main.go
+│   ├── compose/
+│   ├── Dockerfile
+│   ├── README.md
+│   └── example-*.yaml
+├── internal/
+│   ├── bootstrap/
+│   └── jobhandoff/
+└── go.mod
+```
+
+## Infisical Bootstrap Job
+
+The `infisical` job is the main reusable bootstrap entrypoint.
+
+It supports these use cases:
 
 - bootstrap a fresh Infisical instance in platform mode
-- create or reuse an Infisical project
+- create or reuse an organization project
 - create or reuse an environment
-- create or reuse an Infisical identity
-- grant that identity access to the project
-- optionally enable Kubernetes Auth for that identity
-- optionally write bootstrap results back into Kubernetes secrets
+- create or reuse a machine identity
+- grant project membership
+- optionally enable Kubernetes Auth
+- optionally enable Universal Auth
+- optionally seed secrets
+- optionally write results back to Kubernetes secrets
 
-This is intentionally separate from GitOps manifests so the image can be built and reused by different jobs.
+For detailed runtime configuration, examples, and supported modes, see [infisical/README.md](./infisical/README.md).
 
-Implementation note:
+## Agent Vault Bootstrap Job
 
-- the job is written in Go
-- the Dockerfile uses the latest `golang` image in a multi-stage build
+The `agentvault` job is a separate bootstrap step for Agent Vault.
 
-## Files
+Its role is different from the Infisical bootstrap job:
 
-- `cmd/infisical-bootstrap-job/main.go`: bootstrap entrypoint
-- `go.mod`: Go module definition
-- `Dockerfile`: build recipe for the job image
-- `example-project-bootstrap-job.yaml`: working example for project bootstrap with the current image
-- `example-platform-bootstrap-job.yaml`: working example for platform bootstrap with the current image
+- it does not bootstrap Infisical itself
+- it assumes Agent Vault server is already running
+- it uses Infisical bootstrap outputs to configure Agent Vault resources
+
+In the current implementation it can:
+
+- wait for Agent Vault health
+- create the initial owner account if needed
+- log in with that owner
+- create or reuse an Infisical-backed vault
+- trigger credential-store sync
+- register proxy services
+- create or rotate test agent tokens
+- write generated access metadata for downstream tests
+
+This is especially useful for compose-based or CI e2e flows where Agent Vault needs to be fully usable without manual first-login setup.
+
+## Agent Vault Launcher
+
+The `agentvault/launcher` binary is a small helper for environments where Agent Vault server must not start until Infisical bootstrap metadata is available.
+
+It:
+
+- waits for shared metadata to exist
+- exports the required Infisical auth environment variables
+- `exec`s `agent-vault server`
+
+This keeps Agent Vault startup deterministic in automated environments.
 
 ## Build
 
+Build the Infisical image:
+
 ```bash
-docker build -t your-registry/infisical-bootstrap-job:latest jobs/infisical-bootstrap-job
+docker build -t your-registry/infisical-bootstrap-job:latest -f infisical/Dockerfile .
 ```
 
-## Runtime inputs
+Build the Agent Vault image:
 
-Set `BOOTSTRAP_MODE` to choose the flow:
-
-- `platform`: bootstrap a fresh Infisical instance and write the returned bootstrap token to Kubernetes if desired
-- `operator`: bootstrap the shared organization machine identity, reconcile its org role, bind it into the operator project, enable Kubernetes auth, and write Kubernetes output secrets
-- `project`: bootstrap a project, environment, and project membership for a reused machine identity, plus optional app secrets
-
-If `BOOTSTRAP_MODE` is omitted, it defaults to `project`.
-
-### Platform mode
-
-Required environment variables:
-
-- `BOOTSTRAP_MODE=platform`
-- `INFISICAL_URL`
-- `BOOTSTRAP_EMAIL`
-- `BOOTSTRAP_PASSWORD`
-- `ORGANIZATION_NAME`
-
-Optional environment variables:
-
-- `IGNORE_IF_BOOTSTRAPPED`
-- `WRITE_KUBERNETES_SECRET`
-- `OUTPUT_SECRET_NAMESPACE`
-- `OUTPUT_SECRET_NAME`
-- `OUTPUT_SECRET_KEY`
-
-### Operator mode
-
-Required environment variables:
-
-- `BOOTSTRAP_MODE=operator`
-- `INFISICAL_URL`
-- `BOOTSTRAP_SECRET_NAMESPACE` or `INFISICAL_EMAIL`
-- `BOOTSTRAP_SECRET_NAME` or `INFISICAL_PASSWORD`
-- `ORGANIZATION_ID`
-- `PROJECT_NAME`
-- `PROJECT_SLUG`
-- `ENVIRONMENT_NAME`
-- `ENVIRONMENT_SLUG`
-- `IDENTITY_NAME`
-- `ORGANIZATION_IDENTITY_ROLE`
-- `IDENTITY_ROLE`
-- `KUBERNETES_AUTH_HOST`
-- `ALLOWED_NAMESPACES`
-- `ALLOWED_SERVICE_ACCOUNTS`
-- `OUTPUT_SECRET_NAMESPACE`
-- `OUTPUT_SECRET_NAME`
-- `OUTPUT_SECRET_KEY`
-- `OUTPUT_PROJECT_SECRET_NAME`
-- `OUTPUT_PROJECT_SECRET_KEY`
-
-Optional environment variables:
-
-- `OUTPUT_STATUS_CONFIGMAP`
-- `SMOKE_TEST_SECRET_KEY`
-- `SMOKE_TEST_SECRET_VALUE`
-- `SECRETS_JSON`
-
-### Project mode
-
-Required environment variables:
-
-- `BOOTSTRAP_MODE=project`
-- `INFISICAL_URL`
-- `INFISICAL_EMAIL`
-- `INFISICAL_PASSWORD`
-- `ORGANIZATION_ID`
-- `PROJECT_NAME`
-- `PROJECT_SLUG`
-- `ENVIRONMENT_NAME`
-- `ENVIRONMENT_SLUG`
-- `IDENTITY_NAME`
-
-Optional environment variables:
-
-- `IDENTITY_ROLE`
-- `ENABLE_KUBERNETES_AUTH`
-- `ENABLE_UNIVERSAL_AUTH`
-- `KUBERNETES_AUTH_HOST`
-- `ALLOWED_NAMESPACES`
-- `ALLOWED_SERVICE_ACCOUNTS`
-- `WRITE_KUBERNETES_SECRET`
-- `OUTPUT_SECRET_NAMESPACE`
-- `OUTPUT_SECRET_NAME`
-- `OUTPUT_SECRET_KEY`
-- `OUTPUT_PROJECT_SECRET_NAME`
-- `OUTPUT_PROJECT_SECRET_KEY`
-- `SMOKE_TEST_SECRET_KEY`
-- `SMOKE_TEST_SECRET_VALUE`
-- `SECRETS_JSON`
-
-When `ENABLE_UNIVERSAL_AUTH=true`, the job also attaches Universal Auth to the machine identity, creates a fresh client secret, and prints `universalAuthClientId` plus `universalAuthClientSecret` in the JSON result. This is useful for wiring Agent Vault to an Infisical-backed vault in automation.
-
-`SECRETS_JSON` must be a path-aware JSON array:
-
-```json
-[
-  {
-    "key": "INFISICAL_OPERATOR_TEST",
-    "value": "ok"
-  },
-  {
-    "key": "test-file-in-folder",
-    "value": "hello",
-    "path": "/test-folder"
-  }
-]
+```bash
+docker build -t your-registry/agentvault-bootstrap-job:latest -f agentvault/Dockerfile .
 ```
 
-`path` is optional. If omitted or empty, it defaults to `/`. Writing a secret to a non-root `path` is what makes that folder-style path appear in the Infisical UI.
+## Running
 
-## Notes
+The Infisical job entrypoint is documented in [infisical/README.md](./infisical/README.md).
 
-- when `WRITE_KUBERNETES_SECRET=true`, the container expects to run inside Kubernetes with a mounted service account token
-- when `ENABLE_KUBERNETES_AUTH=true`, the same in-cluster service account CA bundle is used as the Kubernetes Auth CA certificate
-- `operator` mode is the only mode that reconciles organization-level machine identity role
-- `project` mode reuses an existing machine identity name and only manages project-level membership
-- this image does not assume any specific app; app-specific manifests can supply different env vars
-- that platform example intentionally mirrors the current repo manifest at `gitops/apps/infisical/manifests/infisical-bootstrap-job.yaml`
+The Agent Vault job is driven by environment variables. In the current e2e-oriented flow it expects values such as:
+
+- `BOOTSTRAP_METADATA_PATH`
+- `AGENT_VAULT_URL`
+- `AGENT_VAULT_OWNER_EMAIL`
+- `AGENT_VAULT_OWNER_PASSWORD`
+- `AGENT_VAULT_SYNC_VAULT_NAME`
+
+Optional service bootstrap variables include:
+
+- `AGENT_VAULT_PROXY_SERVICE_NAME`
+- `AGENT_VAULT_PROXY_SERVICE_HOST`
+- `AGENT_VAULT_PROXY_TOKEN_KEY`
+- `AGENT_VAULT_PROXY_AGENT_NAME`
+- `AGENT_VAULT_PROXY_OUTPUT_PATH`
+- `AGENT_VAULT_PASSTHROUGH_SERVICE_NAME`
+- `AGENT_VAULT_PASSTHROUGH_SERVICE_HOST`
+- `AGENT_VAULT_PASSTHROUGH_TOKEN_KEY`
+- `AGENT_VAULT_PASSTHROUGH_PLACEHOLDER`
+- `AGENT_VAULT_PASSTHROUGH_AGENT_NAME`
+- `AGENT_VAULT_PASSTHROUGH_OUTPUT_PATH`
+
+## Design Notes
+
+- `internal/bootstrap` is the generic Infisical bootstrap layer
+- `internal/jobhandoff` is intentionally small and focused on passing bootstrap outputs between steps
+- the Infisical and Agent Vault jobs are split because they operate at different lifecycle stages
+- the launcher exists because some environments need Infisical-derived auth env vars before Agent Vault server can start correctly
+
+## Typical Automation Flow
+
+In a full e2e environment, the flow usually looks like this:
+
+1. Start Infisical and its dependencies.
+2. Run the Infisical bootstrap job.
+3. Persist the resulting metadata needed by Agent Vault.
+4. Start Agent Vault with the launcher if startup depends on that metadata.
+5. Run the Agent Vault bootstrap job.
+6. Run proxy or integration tests.
+
+## Status
+
+This repo is intended for automation and integration workflows. Some parts are generic and reusable, while some Agent Vault behavior is currently optimized around e2e bootstrap and service-sync scenarios.

@@ -1,0 +1,21 @@
+.git
+.github
+.gitignore
+.dockerignore
+.DS_Store
+
+# Editor and local env files
+.idea
+.vscode
+.env
+.env.*
+*.local
+
+# Build and temp outputs
+bin
+build
+dist
+tmp
+coverage.out
+*.coverprofile
+*.test

@@ -21,17 +21,17 @@ func runPlatform(cfg Config) error {
 		Organization: cfg.OrganizationName,
 	})
 	if err != nil {
-		if cfg.IgnoreIfBootstrapped && isAlreadyBootstrappedError(err) {
+		if cfg.IgnoreIfBootstrapped && IsAlreadyBootstrappedError(err) {
 			if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, map[string]string{
-				"result":                "already-set-up",
-				"message":               "Platform bootstrap skipped because the Infisical instance was already set up.",
-				"mode":                  string(cfg.Mode),
-				"infisicalUrl":          cfg.InfisicalURL,
-				"tokenSecretRequested":  boolString(cfg.WriteKubernetesSecret),
-				"tokenSecretWritten":    "false",
-				"tokenSecretName":       cfg.OutputSecretName,
-				"tokenSecretNamespace":  cfg.OutputSecretNamespace,
-				"tokenSecretReason":     "instance-already-set-up",
+				"result":               "already-set-up",
+				"message":              "Platform bootstrap skipped because the Infisical instance was already set up.",
+				"mode":                 string(cfg.Mode),
+				"infisicalUrl":         cfg.InfisicalURL,
+				"tokenSecretRequested": boolString(cfg.WriteKubernetesSecret),
+				"tokenSecretWritten":   "false",
+				"tokenSecretName":      cfg.OutputSecretName,
+				"tokenSecretNamespace": cfg.OutputSecretNamespace,
+				"tokenSecretReason":    "instance-already-set-up",
 			}); err != nil {
 				return err
 			}
@@ -54,21 +54,21 @@ func runPlatform(cfg Config) error {
 	}
 
 	if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, map[string]string{
-		"result":                "bootstrapped",
-		"message":               "Platform bootstrap completed and returned a bootstrap identity token.",
-		"mode":                  string(cfg.Mode),
-		"infisicalUrl":          cfg.InfisicalURL,
-		"organizationId":        resp.Organization.ID,
-		"organizationName":      resp.Organization.Name,
-		"organizationSlug":      resp.Organization.Slug,
-		"identityId":            resp.Identity.ID,
-		"identityName":          resp.Identity.Name,
-		"userEmail":             resp.User.Email,
-		"tokenSecretRequested":  boolString(cfg.WriteKubernetesSecret),
-		"tokenSecretWritten":    tokenSecretWritten,
-		"tokenSecretName":       cfg.OutputSecretName,
-		"tokenSecretNamespace":  cfg.OutputSecretNamespace,
-		"tokenSecretReason":     tokenSecretReason,
+		"result":               "bootstrapped",
+		"message":              "Platform bootstrap completed and returned a bootstrap identity token.",
+		"mode":                 string(cfg.Mode),
+		"infisicalUrl":         cfg.InfisicalURL,
+		"organizationId":       resp.Organization.ID,
+		"organizationName":     resp.Organization.Name,
+		"organizationSlug":     resp.Organization.Slug,
+		"identityId":           resp.Identity.ID,
+		"identityName":         resp.Identity.Name,
+		"userEmail":            resp.User.Email,
+		"tokenSecretRequested": boolString(cfg.WriteKubernetesSecret),
+		"tokenSecretWritten":   tokenSecretWritten,
+		"tokenSecretName":      cfg.OutputSecretName,
+		"tokenSecretNamespace": cfg.OutputSecretNamespace,
+		"tokenSecretReason":    tokenSecretReason,
 	}); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func runPlatform(cfg Config) error {
 	return json.NewEncoder(os.Stdout).Encode(resp)
 }
 
-func isAlreadyBootstrappedError(err error) bool {
+func IsAlreadyBootstrappedError(err error) bool {
 	var httpErr *HTTPError
 	if !errors.As(err, &httpErr) {
 		return false
