@@ -97,3 +97,80 @@ func UpsertConfigMap(c *HTTPClient, kubeAPI, namespace, token, name string, data
 	_, err = c.JSONRequest(http.MethodPost, fmt.Sprintf("%s/api/v1/namespaces/%s/configmaps", kubeAPI, namespace), BearerHeaders(token), mustMarshal(body))
 	return err
 }
+
+func GetConfigMapData(c *HTTPClient, kubeAPI, namespace, token, name string) (map[string]string, error) {
+	configMapURL := fmt.Sprintf("%s/api/v1/namespaces/%s/configmaps/%s", kubeAPI, namespace, name)
+	payload, err := c.JSONRequest(http.MethodGet, configMapURL, BearerHeaders(token), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var configMap struct {
+		Data map[string]string `json:"data"`
+	}
+	if err := unmarshalInto(payload, &configMap); err != nil {
+		return nil, err
+	}
+
+	return configMap.Data, nil
+}
+
+func UpsertInfisicalStaticSecret(c *HTTPClient, kubeAPI, namespace, token, name, authRefName, authRefNamespace, projectID, environmentSlug, targetSecretName string, labels map[string]string) error {
+	resourceURL := fmt.Sprintf("%s/apis/secrets.infisical.com/v1beta1/namespaces/%s/infisicalstaticsecrets/%s", kubeAPI, namespace, name)
+	body := map[string]any{
+		"apiVersion": "secrets.infisical.com/v1beta1",
+		"kind":       "InfisicalStaticSecret",
+		"metadata": map[string]any{
+			"name":      name,
+			"namespace": namespace,
+			"labels":    labels,
+		},
+		"spec": map[string]any{
+			"infisicalAuthRef": map[string]any{
+				"name":      authRefName,
+				"namespace": authRefNamespace,
+			},
+			"sources": []map[string]any{
+				{
+					"projectId":       projectID,
+					"environmentSlug": environmentSlug,
+					"secretPath":      "/",
+					"recursive":       false,
+				},
+			},
+			"syncOptions": map[string]any{
+				"refreshInterval": "1m",
+			},
+			"targets": []map[string]any{
+				{
+					"kind":           "Secret",
+					"name":           targetSecretName,
+					"namespace":      namespace,
+					"creationPolicy": "Owner",
+					"metadata": map[string]any{
+						"labels":      labels,
+						"annotations": map[string]string{},
+					},
+				},
+			},
+		},
+	}
+
+	payload, err := c.JSONRequest(http.MethodGet, resourceURL, BearerHeaders(token), nil)
+	if err == nil {
+		var existing map[string]any
+		if err := unmarshalInto(payload, &existing); err != nil {
+			return err
+		}
+		if metadata, ok := existing["metadata"].(map[string]any); ok {
+			if rv, ok := metadata["resourceVersion"].(string); ok {
+				body["metadata"].(map[string]any)["resourceVersion"] = rv
+			}
+		}
+		_, err := c.JSONRequest(http.MethodPut, resourceURL, BearerHeaders(token), mustMarshal(body))
+		return err
+	}
+
+	_, err = c.JSONRequest(http.MethodPost, fmt.Sprintf("%s/apis/secrets.infisical.com/v1beta1/namespaces/%s/infisicalstaticsecrets", kubeAPI, namespace), BearerHeaders(token), mustMarshal(body))
+	return err
+}

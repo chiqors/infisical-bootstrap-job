@@ -72,7 +72,7 @@ Required environment variables:
 - `INFISICAL_URL`
 - `BOOTSTRAP_SECRET_NAMESPACE` or `INFISICAL_EMAIL`
 - `BOOTSTRAP_SECRET_NAME` or `INFISICAL_PASSWORD`
-- `ORGANIZATION_ID`
+- `ORGANIZATION_ID` or `ORGANIZATION_ID_SOURCE_NAMESPACE` + `ORGANIZATION_ID_SOURCE_CONFIGMAP`
 - `PROJECT_NAME`
 - `PROJECT_SLUG`
 - `ENVIRONMENT_NAME`
@@ -92,8 +92,14 @@ Required environment variables:
 Optional environment variables:
 
 - `OUTPUT_STATUS_CONFIGMAP`
+- `ORGANIZATION_ID_SOURCE_KEY`
 - `SMOKE_TEST_SECRET_KEY`
 - `SMOKE_TEST_SECRET_VALUE`
+- `OUTPUT_STATIC_SECRET_NAME`
+- `OUTPUT_STATIC_SECRET_NAMESPACE`
+- `OUTPUT_STATIC_SECRET_AUTH_REF_NAME`
+- `OUTPUT_STATIC_SECRET_AUTH_REF_NAMESPACE`
+- `OUTPUT_STATIC_SECRET_TARGET_SECRET_NAME`
 - `SECRETS_JSON`
 
 ### Project mode
@@ -104,7 +110,7 @@ Required environment variables:
 - `INFISICAL_URL`
 - `INFISICAL_EMAIL`
 - `INFISICAL_PASSWORD`
-- `ORGANIZATION_ID`
+- `ORGANIZATION_ID` or `ORGANIZATION_ID_SOURCE_NAMESPACE` + `ORGANIZATION_ID_SOURCE_CONFIGMAP`
 - `PROJECT_NAME`
 - `PROJECT_SLUG`
 - `ENVIRONMENT_NAME`
@@ -113,6 +119,7 @@ Required environment variables:
 
 Optional environment variables:
 
+- `ORGANIZATION_ID_SOURCE_KEY`
 - `IDENTITY_ROLE`
 - `ENABLE_KUBERNETES_AUTH`
 - `ENABLE_UNIVERSAL_AUTH`
@@ -127,6 +134,11 @@ Optional environment variables:
 - `OUTPUT_PROJECT_SECRET_KEY`
 - `SMOKE_TEST_SECRET_KEY`
 - `SMOKE_TEST_SECRET_VALUE`
+- `OUTPUT_STATIC_SECRET_NAME`
+- `OUTPUT_STATIC_SECRET_NAMESPACE`
+- `OUTPUT_STATIC_SECRET_AUTH_REF_NAME`
+- `OUTPUT_STATIC_SECRET_AUTH_REF_NAMESPACE`
+- `OUTPUT_STATIC_SECRET_TARGET_SECRET_NAME`
 - `SECRETS_JSON`
 
 When `ENABLE_UNIVERSAL_AUTH=true`, the job also attaches Universal Auth to the machine identity, creates a fresh client secret, and prints `universalAuthClientId` plus `universalAuthClientSecret` in the JSON result. This is useful for wiring Agent Vault to an Infisical-backed vault in automation.
@@ -153,6 +165,8 @@ When `ENABLE_UNIVERSAL_AUTH=true`, the job also attaches Universal Auth to the m
 
 - when `WRITE_KUBERNETES_SECRET=true`, the container expects to run inside Kubernetes with a mounted service account token
 - when `ENABLE_KUBERNETES_AUTH=true`, the same in-cluster service account CA bundle is used as the Kubernetes Auth CA certificate
+- when `ORGANIZATION_ID` is omitted, the job can hydrate it from a prior bootstrap status `ConfigMap` using `ORGANIZATION_ID_SOURCE_NAMESPACE`, `ORGANIZATION_ID_SOURCE_CONFIGMAP`, and optional `ORGANIZATION_ID_SOURCE_KEY`
+- when `OUTPUT_STATIC_SECRET_NAME` is set, the job also creates or updates an `InfisicalStaticSecret` that points at the bootstrapped project ID
 - `operator` mode is the only mode that reconciles organization-level machine identity role
 - `project` mode reuses an existing machine identity name and only manages project-level membership
 - this image does not assume any specific app; app-specific manifests can supply different env vars

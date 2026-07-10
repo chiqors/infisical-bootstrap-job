@@ -16,74 +16,90 @@ const (
 )
 
 type Config struct {
-	Mode                     Mode
-	InfisicalURL             string
-	BootstrapEmail           string
-	BootstrapPassword        string
-	OrganizationName         string
-	IgnoreIfBootstrapped     bool
-	InfisicalEmail           string
-	InfisicalPassword        string
-	BootstrapSecretNamespace string
-	BootstrapSecretName      string
-	BootstrapEmailKey        string
-	BootstrapPasswordKey     string
-	OrganizationID           string
-	ProjectName              string
-	ProjectSlug              string
-	EnvironmentName          string
-	EnvironmentSlug          string
-	IdentityName             string
-	OrganizationIdentityRole string
-	IdentityRole             string
-	EnableKubernetesAuth     bool
-	EnableUniversalAuth      bool
-	KubernetesAuthHost       string
-	AllowedNamespaces        string
-	AllowedServiceAccounts   string
-	WriteKubernetesSecret    bool
-	OutputSecretNamespace    string
-	OutputSecretName         string
-	OutputSecretKey          string
-	OutputStatusConfigMap    string
-	OutputProjectSecretName  string
-	OutputProjectSecretKey   string
-	SmokeTestSecretKey       string
-	SmokeTestSecretValue     string
-	Secrets                  []SecretSpec
+	Mode                               Mode
+	InfisicalURL                       string
+	BootstrapEmail                     string
+	BootstrapPassword                  string
+	OrganizationName                   string
+	IgnoreIfBootstrapped               bool
+	InfisicalEmail                     string
+	InfisicalPassword                  string
+	BootstrapSecretNamespace           string
+	BootstrapSecretName                string
+	BootstrapEmailKey                  string
+	BootstrapPasswordKey               string
+	OrganizationID                     string
+	OrganizationIDSourceNamespace      string
+	OrganizationIDSourceConfigMap      string
+	OrganizationIDSourceKey            string
+	ProjectName                        string
+	ProjectSlug                        string
+	EnvironmentName                    string
+	EnvironmentSlug                    string
+	IdentityName                       string
+	OrganizationIdentityRole           string
+	IdentityRole                       string
+	EnableKubernetesAuth               bool
+	EnableUniversalAuth                bool
+	KubernetesAuthHost                 string
+	AllowedNamespaces                  string
+	AllowedServiceAccounts             string
+	WriteKubernetesSecret              bool
+	OutputSecretNamespace              string
+	OutputSecretName                   string
+	OutputSecretKey                    string
+	OutputStatusConfigMap              string
+	OutputProjectSecretName            string
+	OutputProjectSecretKey             string
+	OutputStaticSecretName             string
+	OutputStaticSecretNamespace        string
+	OutputStaticSecretAuthRefName      string
+	OutputStaticSecretAuthRefNamespace string
+	OutputStaticSecretTargetSecretName string
+	SmokeTestSecretKey                 string
+	SmokeTestSecretValue               string
+	Secrets                            []SecretSpec
 }
 
 func LoadConfig() Config {
 	cfg := Config{
-		Mode:                     loadMode(),
-		InfisicalURL:             strings.TrimRight(mustEnv("INFISICAL_URL"), "/"),
-		BootstrapEmail:           strings.TrimSpace(os.Getenv("BOOTSTRAP_EMAIL")),
-		BootstrapPassword:        strings.TrimSpace(os.Getenv("BOOTSTRAP_PASSWORD")),
-		OrganizationName:         strings.TrimSpace(os.Getenv("ORGANIZATION_NAME")),
-		IgnoreIfBootstrapped:     envBool("IGNORE_IF_BOOTSTRAPPED", false),
-		InfisicalEmail:           strings.TrimSpace(os.Getenv("INFISICAL_EMAIL")),
-		InfisicalPassword:        strings.TrimSpace(os.Getenv("INFISICAL_PASSWORD")),
-		BootstrapSecretNamespace: strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAMESPACE")),
-		BootstrapSecretName:      strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAME")),
-		BootstrapEmailKey:        strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_EMAIL_KEY")),
-		BootstrapPasswordKey:     strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_PASSWORD_KEY")),
-		OrganizationID:           strings.TrimSpace(os.Getenv("ORGANIZATION_ID")),
-		ProjectName:              strings.TrimSpace(os.Getenv("PROJECT_NAME")),
-		ProjectSlug:              strings.TrimSpace(os.Getenv("PROJECT_SLUG")),
-		EnvironmentName:          strings.TrimSpace(os.Getenv("ENVIRONMENT_NAME")),
-		EnvironmentSlug:          strings.TrimSpace(os.Getenv("ENVIRONMENT_SLUG")),
-		IdentityName:             strings.TrimSpace(os.Getenv("IDENTITY_NAME")),
-		OrganizationIdentityRole: strings.TrimSpace(os.Getenv("ORGANIZATION_IDENTITY_ROLE")),
-		IdentityRole:             strings.TrimSpace(os.Getenv("IDENTITY_ROLE")),
-		EnableKubernetesAuth:     envBool("ENABLE_KUBERNETES_AUTH", false),
-		EnableUniversalAuth:      envBool("ENABLE_UNIVERSAL_AUTH", false),
-		WriteKubernetesSecret:    envBool("WRITE_KUBERNETES_SECRET", false),
-		OutputStatusConfigMap:    strings.TrimSpace(os.Getenv("OUTPUT_STATUS_CONFIGMAP")),
-		OutputProjectSecretName:  strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_NAME")),
-		OutputProjectSecretKey:   strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_KEY")),
-		SmokeTestSecretKey:       strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_KEY")),
-		SmokeTestSecretValue:     strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_VALUE")),
-		Secrets:                  loadSecrets("SECRETS_JSON"),
+		Mode:                               loadMode(),
+		InfisicalURL:                       strings.TrimRight(mustEnv("INFISICAL_URL"), "/"),
+		BootstrapEmail:                     strings.TrimSpace(os.Getenv("BOOTSTRAP_EMAIL")),
+		BootstrapPassword:                  strings.TrimSpace(os.Getenv("BOOTSTRAP_PASSWORD")),
+		OrganizationName:                   strings.TrimSpace(os.Getenv("ORGANIZATION_NAME")),
+		IgnoreIfBootstrapped:               envBool("IGNORE_IF_BOOTSTRAPPED", false),
+		InfisicalEmail:                     strings.TrimSpace(os.Getenv("INFISICAL_EMAIL")),
+		InfisicalPassword:                  strings.TrimSpace(os.Getenv("INFISICAL_PASSWORD")),
+		BootstrapSecretNamespace:           strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAMESPACE")),
+		BootstrapSecretName:                strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_NAME")),
+		BootstrapEmailKey:                  strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_EMAIL_KEY")),
+		BootstrapPasswordKey:               strings.TrimSpace(os.Getenv("BOOTSTRAP_SECRET_PASSWORD_KEY")),
+		OrganizationID:                     strings.TrimSpace(os.Getenv("ORGANIZATION_ID")),
+		OrganizationIDSourceNamespace:      strings.TrimSpace(os.Getenv("ORGANIZATION_ID_SOURCE_NAMESPACE")),
+		OrganizationIDSourceConfigMap:      strings.TrimSpace(os.Getenv("ORGANIZATION_ID_SOURCE_CONFIGMAP")),
+		OrganizationIDSourceKey:            strings.TrimSpace(os.Getenv("ORGANIZATION_ID_SOURCE_KEY")),
+		ProjectName:                        strings.TrimSpace(os.Getenv("PROJECT_NAME")),
+		ProjectSlug:                        strings.TrimSpace(os.Getenv("PROJECT_SLUG")),
+		EnvironmentName:                    strings.TrimSpace(os.Getenv("ENVIRONMENT_NAME")),
+		EnvironmentSlug:                    strings.TrimSpace(os.Getenv("ENVIRONMENT_SLUG")),
+		IdentityName:                       strings.TrimSpace(os.Getenv("IDENTITY_NAME")),
+		OrganizationIdentityRole:           strings.TrimSpace(os.Getenv("ORGANIZATION_IDENTITY_ROLE")),
+		IdentityRole:                       strings.TrimSpace(os.Getenv("IDENTITY_ROLE")),
+		EnableKubernetesAuth:               envBool("ENABLE_KUBERNETES_AUTH", false),
+		EnableUniversalAuth:                envBool("ENABLE_UNIVERSAL_AUTH", false),
+		WriteKubernetesSecret:              envBool("WRITE_KUBERNETES_SECRET", false),
+		OutputStatusConfigMap:              strings.TrimSpace(os.Getenv("OUTPUT_STATUS_CONFIGMAP")),
+		OutputProjectSecretName:            strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_NAME")),
+		OutputProjectSecretKey:             strings.TrimSpace(os.Getenv("OUTPUT_PROJECT_SECRET_KEY")),
+		OutputStaticSecretName:             strings.TrimSpace(os.Getenv("OUTPUT_STATIC_SECRET_NAME")),
+		OutputStaticSecretNamespace:        strings.TrimSpace(os.Getenv("OUTPUT_STATIC_SECRET_NAMESPACE")),
+		OutputStaticSecretAuthRefName:      strings.TrimSpace(os.Getenv("OUTPUT_STATIC_SECRET_AUTH_REF_NAME")),
+		OutputStaticSecretAuthRefNamespace: strings.TrimSpace(os.Getenv("OUTPUT_STATIC_SECRET_AUTH_REF_NAMESPACE")),
+		OutputStaticSecretTargetSecretName: strings.TrimSpace(os.Getenv("OUTPUT_STATIC_SECRET_TARGET_SECRET_NAME")),
+		SmokeTestSecretKey:                 strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_KEY")),
+		SmokeTestSecretValue:               strings.TrimSpace(os.Getenv("SMOKE_TEST_SECRET_VALUE")),
+		Secrets:                            loadSecrets("SECRETS_JSON"),
 	}
 
 	cfg.validate()
@@ -149,7 +165,17 @@ func (cfg *Config) requireProjectFields() {
 		cfg.InfisicalEmail = mustEnv("INFISICAL_EMAIL")
 		cfg.InfisicalPassword = mustEnv("INFISICAL_PASSWORD")
 	}
-	cfg.OrganizationID = mustEnv("ORGANIZATION_ID")
+	if cfg.OrganizationID == "" {
+		if cfg.OrganizationIDSourceNamespace != "" || cfg.OrganizationIDSourceConfigMap != "" || cfg.OrganizationIDSourceKey != "" {
+			cfg.OrganizationIDSourceNamespace = mustEnv("ORGANIZATION_ID_SOURCE_NAMESPACE")
+			cfg.OrganizationIDSourceConfigMap = mustEnv("ORGANIZATION_ID_SOURCE_CONFIGMAP")
+			if cfg.OrganizationIDSourceKey == "" {
+				cfg.OrganizationIDSourceKey = "organizationId"
+			}
+		} else {
+			cfg.OrganizationID = mustEnv("ORGANIZATION_ID")
+		}
+	}
 	cfg.ProjectName = mustEnv("PROJECT_NAME")
 	cfg.ProjectSlug = mustEnv("PROJECT_SLUG")
 	cfg.EnvironmentName = mustEnv("ENVIRONMENT_NAME")
@@ -157,6 +183,18 @@ func (cfg *Config) requireProjectFields() {
 	cfg.IdentityName = mustEnv("IDENTITY_NAME")
 	if cfg.IdentityRole == "" {
 		cfg.IdentityRole = "member"
+	}
+	if cfg.OutputStaticSecretName != "" {
+		if cfg.OutputStaticSecretNamespace == "" {
+			cfg.OutputStaticSecretNamespace = cfg.OutputSecretNamespace
+		}
+		cfg.OutputStaticSecretAuthRefName = mustEnv("OUTPUT_STATIC_SECRET_AUTH_REF_NAME")
+		if cfg.OutputStaticSecretAuthRefNamespace == "" {
+			cfg.OutputStaticSecretAuthRefNamespace = cfg.OutputStaticSecretNamespace
+		}
+		if cfg.OutputStaticSecretTargetSecretName == "" {
+			cfg.OutputStaticSecretTargetSecretName = cfg.OutputStaticSecretName
+		}
 	}
 }
 

@@ -19,6 +19,9 @@ func runProjectLike(cfg Config) error {
 	if err := hydrateProjectCredentials(&cfg); err != nil {
 		return err
 	}
+	if err := hydrateOrganizationID(&cfg); err != nil {
+		return err
+	}
 
 	sessionToken, err := LoginWithPassword(api, cfg.InfisicalURL, cfg.InfisicalEmail, cfg.InfisicalPassword)
 	if err != nil {
@@ -109,6 +112,32 @@ func runProjectLike(cfg Config) error {
 		}
 	}
 
+	if cfg.OutputStaticSecretName != "" {
+		if kube == nil {
+			return fmt.Errorf("OUTPUT_STATIC_SECRET_NAME requires in-cluster Kubernetes access")
+		}
+		kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+		labels := map[string]string{
+			"homelab.io/app":      cfg.ProjectSlug,
+			"homelab.io/category": "platform",
+		}
+		if err := UpsertInfisicalStaticSecret(
+			kube,
+			kubeAPI,
+			cfg.OutputStaticSecretNamespace,
+			saToken,
+			cfg.OutputStaticSecretName,
+			cfg.OutputStaticSecretAuthRefName,
+			cfg.OutputStaticSecretAuthRefNamespace,
+			project.ID,
+			cfg.EnvironmentSlug,
+			cfg.OutputStaticSecretTargetSecretName,
+			labels,
+		); err != nil {
+			return err
+		}
+	}
+
 	result := Result{
 		ProjectID:                 project.ID,
 		ProjectSlug:               project.Slug,
@@ -152,6 +181,36 @@ func hydrateProjectCredentials(cfg *Config) error {
 
 	cfg.InfisicalEmail = email
 	cfg.InfisicalPassword = password
+	return nil
+}
+
+func hydrateOrganizationID(cfg *Config) error {
+	if cfg.OrganizationID != "" {
+		return nil
+	}
+	if cfg.OrganizationIDSourceNamespace == "" || cfg.OrganizationIDSourceConfigMap == "" {
+		return fmt.Errorf("missing ORGANIZATION_ID or ORGANIZATION_ID_SOURCE_* configuration")
+	}
+
+	kube, saToken, _, err := NewKubeHTTPClient()
+	if err != nil {
+		return err
+	}
+	kubeAPI := fmt.Sprintf("https://%s:%s", os.Getenv("KUBERNETES_SERVICE_HOST"), kubeServicePort())
+	data, err := GetConfigMapData(kube, kubeAPI, cfg.OrganizationIDSourceNamespace, saToken, cfg.OrganizationIDSourceConfigMap)
+	if err != nil {
+		return err
+	}
+
+	key := cfg.OrganizationIDSourceKey
+	if key == "" {
+		key = "organizationId"
+	}
+	cfg.OrganizationID = data[key]
+	if cfg.OrganizationID == "" {
+		return fmt.Errorf("missing %q in configmap %s/%s", key, cfg.OrganizationIDSourceNamespace, cfg.OrganizationIDSourceConfigMap)
+	}
+
 	return nil
 }
 
