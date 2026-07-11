@@ -22,7 +22,7 @@ func runPlatform(cfg Config) error {
 	})
 	if err != nil {
 		if cfg.IgnoreIfBootstrapped && IsAlreadyBootstrappedError(err) {
-			if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, map[string]string{
+			statusData := map[string]string{
 				"result":               "already-set-up",
 				"message":              "Platform bootstrap skipped because the Infisical instance was already set up.",
 				"mode":                 string(cfg.Mode),
@@ -32,7 +32,9 @@ func runPlatform(cfg Config) error {
 				"tokenSecretName":      cfg.OutputSecretName,
 				"tokenSecretNamespace": cfg.OutputSecretNamespace,
 				"tokenSecretReason":    "instance-already-set-up",
-			}); err != nil {
+			}
+			preserveExistingPlatformStatus(cfg, kube, kubeAPI, saToken, statusData)
+			if err := writePlatformStatus(cfg, kube, kubeAPI, saToken, statusData); err != nil {
 				return err
 			}
 			return nil
@@ -74,6 +76,23 @@ func runPlatform(cfg Config) error {
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(resp)
+}
+
+func preserveExistingPlatformStatus(cfg Config, kube *HTTPClient, kubeAPI, saToken string, statusData map[string]string) {
+	if cfg.OutputStatusConfigMap == "" || kube == nil {
+		return
+	}
+
+	existing, err := GetConfigMapData(kube, kubeAPI, cfg.OutputSecretNamespace, saToken, cfg.OutputStatusConfigMap)
+	if err != nil {
+		return
+	}
+
+	for _, key := range []string{"organizationId", "organizationName", "organizationSlug", "identityId", "identityName", "userEmail"} {
+		if statusData[key] == "" && existing[key] != "" {
+			statusData[key] = existing[key]
+		}
+	}
 }
 
 func IsAlreadyBootstrappedError(err error) bool {
